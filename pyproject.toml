@@ -1,0 +1,79 @@
+[project]
+name = "reviewer2"
+version = "0.1.0"
+description = "Reviewer2 — an evidence-grounded second-reviewer AI for germline ACMG/AMP variant classification."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Ankur Sharma" }]
+keywords = [
+    "genomics",
+    "acmg",
+    "variant-interpretation",
+    "agentic-ai",
+    "langgraph",
+    "mcp",
+    "clinical-genomics",
+]
+
+# Core dependencies — kept deliberately lean so `make demo` and `make eval`
+# run fully offline, deterministically, with NO API keys.
+dependencies = [
+    "pydantic>=2.6",
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+    "typer>=0.12",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+# Live evidence providers (real ClinVar / gnomAD / VEP APIs). Optional — the
+# default fixture provider needs none of this.
+live = ["httpx>=0.27"]
+
+# Standalone MCP server so other AI agents can call the gnomAD/ClinVar tools.
+mcp = ["mcp>=1.2.0"]
+
+# Streamlit demo UI.
+app = ["streamlit>=1.36"]
+
+# Cloud LLM providers (all optional — local Ollama is the default).
+anthropic = ["anthropic>=0.39"]
+openai = ["openai>=1.40"]
+gemini = ["google-genai>=0.3"]
+cloud = ["anthropic>=0.39", "openai>=1.40", "google-genai>=0.3"]
+
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+reviewer2 = "reviewer2.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/reviewer2"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "eval", "mcp_server", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]

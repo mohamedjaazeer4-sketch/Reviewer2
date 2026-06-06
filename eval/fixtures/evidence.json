@@ -1,0 +1,105 @@
+{
+  "GRCh38-17-43093464-A-T": [
+    {
+      "source": "VEP",
+      "summary": "Frameshift variant in BRCA1 (LoF-intolerant).",
+      "source_quote": "Consequence: frameshift_variant; BRCA1 transcript NM_007294.4.",
+      "source_id": "VEP-BRCA1-43093464",
+      "data": { "consequence": "frameshift_variant" }
+    },
+    {
+      "source": "gnomAD",
+      "summary": "Absent from gnomAD v4 (no observed alleles).",
+      "source_quote": "Global allele frequency: 0.0 (0 / 1613998 alleles).",
+      "source_id": "gnomad-v4-17-43093464",
+      "data": { "allele_frequency": 0.0 }
+    },
+    {
+      "source": "ClinVar",
+      "summary": "ClinVar: Pathogenic (reviewed by expert panel), updated 2026-01-15.",
+      "source_quote": "Germline classification: Pathogenic; Review status: reviewed by expert panel (ENIGMA).",
+      "source_id": "VCV000017661",
+      "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/17661/",
+      "data": {
+        "clinvar_classification": "Pathogenic",
+        "review_status_conflicting": false,
+        "same_aa_change_pathogenic": true
+      },
+      "source_last_updated": "2026-01-15"
+    }
+  ],
+
+  "GRCh38-1-55039974-G-A": [
+    {
+      "source": "VEP",
+      "summary": "Missense variant in PCSK9.",
+      "source_quote": "Consequence: missense_variant; p.Arg46Leu.",
+      "source_id": "VEP-PCSK9-55039974",
+      "data": { "consequence": "missense_variant" }
+    },
+    {
+      "source": "gnomAD",
+      "summary": "PCSK9 p.Arg46Leu is common (~1.6% global; loss-of-function, LDL-lowering).",
+      "source_quote": "Global allele frequency: 0.0160 (popmax NFE 0.021).",
+      "source_id": "gnomad-v4-1-55039974",
+      "data": { "allele_frequency": 0.016 }
+    },
+    {
+      "source": "computational",
+      "summary": "In-silico ensemble predicts tolerated.",
+      "source_quote": "Ensemble pathogenicity score: 0.18 (REVEL-like, tolerated).",
+      "source_id": "insilico-1-55039974",
+      "data": { "ensemble_score": 0.18 }
+    },
+    {
+      "source": "ClinVar",
+      "summary": "ClinVar: Benign/Likely benign, no conflicts, updated 2025-11-02.",
+      "source_quote": "Germline classification: Benign; Review status: criteria provided, multiple submitters, no conflicts.",
+      "source_id": "VCV000004309",
+      "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4309/",
+      "data": {
+        "clinvar_classification": "Benign",
+        "review_status_conflicting": false,
+        "same_aa_change_pathogenic": false
+      },
+      "source_last_updated": "2025-11-02"
+    }
+  ],
+
+  "GRCh38-13-32340301-T-C": [
+    {
+      "source": "VEP",
+      "summary": "Missense variant in BRCA2.",
+      "source_quote": "Consequence: missense_variant; p.Val2466Ala.",
+      "source_id": "VEP-BRCA2-32340301",
+      "data": { "consequence": "missense_variant" }
+    },
+    {
+      "source": "gnomAD",
+      "summary": "BRCA2 p.Val2466Ala is common (~26%); a well-known benign polymorphism.",
+      "source_quote": "Global allele frequency: 0.262 (popmax 0.30).",
+      "source_id": "gnomad-v4-13-32340301",
+      "data": { "allele_frequency": 0.262 }
+    },
+    {
+      "source": "computational",
+      "summary": "In-silico ensemble predicts tolerated.",
+      "source_quote": "Ensemble pathogenicity score: 0.05 (tolerated).",
+      "source_id": "insilico-13-32340301",
+      "data": { "ensemble_score": 0.05 }
+    },
+    {
+      "source": "ClinVar",
+      "summary": "ClinVar: Benign (expert panel), updated 2024-03-10 (older record).",
+      "source_quote": "Germline classification: Benign; Review status: reviewed by expert panel (ENIGMA).",
+      "source_id": "VCV000038266",
+      "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/38266/",
+      "data": {
+        "clinvar_classification": "Benign",
+        "review_status_conflicting": false,
+        "same_aa_change_pathogenic": false
+      },
+      "source_last_updated": "2024-03-10"
+    }
+  ]
+}

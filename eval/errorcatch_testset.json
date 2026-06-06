@@ -1,0 +1,182 @@
+{
+  "_about": "ErrorCatch test set for Reviewer2. Each case carries inline evidence so the eval is fully self-contained and reproducible offline. 'is_injected_error' marks cases where the proposed_classification is deliberately wrong given the evidence; controls (is_injected_error=false) let us measure the false-positive rate. This is a HAND-CURATED STARTER set — extend it with real (anonymised) cases from your own practice; the harness reports n so the metric stays honest.",
+  "cases": [
+    {
+      "id": "stale-clinvar-brca1-01",
+      "error_type": "stale_clinvar",
+      "is_injected_error": true,
+      "expected_truth": "Pathogenic",
+      "proposed_classification": "Uncertain significance",
+      "note": "Null variant; ClinVar updated to Pathogenic >1yr after the VUS call was made.",
+      "variant": {"genome": "GRCh38", "chrom": "17", "pos": 43093464, "ref": "A", "alt": "T", "gene": "BRCA1", "hgvs_p": "p.Glu23fs"},
+      "evidence": [
+        {"source": "VEP", "summary": "frameshift", "source_quote": "Consequence: frameshift_variant.", "data": {"consequence": "frameshift_variant"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}},
+        {"source": "ClinVar", "summary": "Pathogenic, expert panel", "source_quote": "Germline classification: Pathogenic (ENIGMA).", "source_id": "VCV000017661", "data": {"clinvar_classification": "Pathogenic", "review_status_conflicting": false, "same_aa_change_pathogenic": true}, "source_last_updated": "2024-02-01"}
+      ]
+    },
+    {
+      "id": "stale-clinvar-mlh1-02",
+      "error_type": "stale_clinvar",
+      "is_injected_error": true,
+      "expected_truth": "Pathogenic",
+      "proposed_classification": "Likely benign",
+      "note": "Lynch-syndrome gene; record updated long after proposed call.",
+      "variant": {"genome": "GRCh38", "chrom": "3", "pos": 37001000, "ref": "C", "alt": "T", "gene": "MLH1", "hgvs_p": "p.Gln544fs"},
+      "evidence": [
+        {"source": "VEP", "summary": "frameshift", "source_quote": "Consequence: frameshift_variant.", "data": {"consequence": "frameshift_variant"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}},
+        {"source": "ClinVar", "summary": "Pathogenic", "source_quote": "Germline classification: Pathogenic.", "source_id": "VCV000090514", "data": {"clinvar_classification": "Pathogenic", "review_status_conflicting": false, "same_aa_change_pathogenic": true}, "source_last_updated": "2023-09-12"}
+      ]
+    },
+    {
+      "id": "submitter-conflict-msh2-01",
+      "error_type": "clinvar_submitter_conflict",
+      "is_injected_error": true,
+      "expected_truth": "Uncertain significance",
+      "proposed_classification": "Likely pathogenic",
+      "note": "ClinVar shows conflicting submissions; a confident LP call hides genuine disagreement.",
+      "variant": {"genome": "GRCh38", "chrom": "2", "pos": 47403000, "ref": "G", "alt": "A", "gene": "MSH2", "hgvs_p": "p.Asp603Asn"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "rare", "source_quote": "Global AF: 3e-5.", "data": {"allele_frequency": 3e-05}},
+        {"source": "computational", "summary": "intermediate", "source_quote": "Ensemble score: 0.55.", "data": {"ensemble_score": 0.55}},
+        {"source": "ClinVar", "summary": "Conflicting", "source_quote": "Review status: conflicting interpretations of pathogenicity.", "source_id": "VCV000091000", "data": {"clinvar_classification": "Conflicting", "review_status_conflicting": true, "same_aa_change_pathogenic": false}, "source_last_updated": "2026-03-01"}
+      ]
+    },
+    {
+      "id": "overcall-common-brca2-01",
+      "error_type": "overcall_benign_common",
+      "is_injected_error": true,
+      "expected_truth": "Benign",
+      "proposed_classification": "Likely pathogenic",
+      "note": "26% allele frequency (BA1) but proposed pathogenic — a classic over-call.",
+      "variant": {"genome": "GRCh38", "chrom": "13", "pos": 32340301, "ref": "T", "alt": "C", "gene": "BRCA2", "hgvs_p": "p.Val2466Ala"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "common", "source_quote": "Global AF: 0.262.", "data": {"allele_frequency": 0.262}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.05.", "data": {"ensemble_score": 0.05}},
+        {"source": "ClinVar", "summary": "Benign", "source_quote": "Germline classification: Benign (ENIGMA).", "source_id": "VCV000038266", "data": {"clinvar_classification": "Benign", "review_status_conflicting": false, "same_aa_change_pathogenic": false}, "source_last_updated": "2025-06-01"}
+      ]
+    },
+    {
+      "id": "overcall-common-pcsk9-01",
+      "error_type": "overcall_benign_common",
+      "is_injected_error": true,
+      "expected_truth": "Benign",
+      "proposed_classification": "Pathogenic",
+      "note": "1.6% AF (BS1) + tolerated in-silico; proposed Pathogenic is wrong direction.",
+      "variant": {"genome": "GRCh38", "chrom": "1", "pos": 55039974, "ref": "G", "alt": "A", "gene": "PCSK9", "hgvs_p": "p.Arg46Leu"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "1.6%", "source_quote": "Global AF: 0.016.", "data": {"allele_frequency": 0.016}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.18.", "data": {"ensemble_score": 0.18}},
+        {"source": "ClinVar", "summary": "Benign", "source_quote": "Germline classification: Benign.", "source_id": "VCV000004309", "data": {"clinvar_classification": "Benign", "review_status_conflicting": false, "same_aa_change_pathogenic": false}, "source_last_updated": "2025-11-02"}
+      ]
+    },
+    {
+      "id": "undercall-null-tp53-01",
+      "error_type": "undercall_pathogenic_null",
+      "is_injected_error": true,
+      "expected_truth": "Likely pathogenic",
+      "proposed_classification": "Uncertain significance",
+      "note": "Absent null variant in TP53 (LoF-intolerant); VUS under-calls it.",
+      "variant": {"genome": "GRCh38", "chrom": "17", "pos": 7675000, "ref": "C", "alt": "T", "gene": "TP53", "hgvs_p": "p.Arg213*"},
+      "evidence": [
+        {"source": "VEP", "summary": "stop gained", "source_quote": "Consequence: stop_gained.", "data": {"consequence": "stop_gained"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}},
+        {"source": "computational", "summary": "damaging", "source_quote": "Ensemble score: 0.92.", "data": {"ensemble_score": 0.92}},
+        {"source": "ClinVar", "summary": "Pathogenic", "source_quote": "Germline classification: Pathogenic.", "source_id": "VCV000043594", "data": {"clinvar_classification": "Pathogenic", "review_status_conflicting": false, "same_aa_change_pathogenic": true}, "source_last_updated": "2025-08-20"}
+      ]
+    },
+    {
+      "id": "undercall-null-pten-01",
+      "error_type": "undercall_pathogenic_null",
+      "is_injected_error": true,
+      "expected_truth": "Likely pathogenic",
+      "proposed_classification": "Likely benign",
+      "note": "Splice-donor null in PTEN; proposed Likely benign is a direction error.",
+      "variant": {"genome": "GRCh38", "chrom": "10", "pos": 87900000, "ref": "G", "alt": "A", "gene": "PTEN", "hgvs_c": "c.209+1G>A"},
+      "evidence": [
+        {"source": "VEP", "summary": "splice donor", "source_quote": "Consequence: splice_donor_variant.", "data": {"consequence": "splice_donor_variant"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}},
+        {"source": "ClinVar", "summary": "Pathogenic", "source_quote": "Germline classification: Pathogenic.", "source_id": "VCV000401000", "data": {"clinvar_classification": "Pathogenic", "review_status_conflicting": false, "same_aa_change_pathogenic": true}, "source_last_updated": "2025-12-01"}
+      ]
+    },
+    {
+      "id": "wrong-direction-insilico-apc-01",
+      "error_type": "wrong_direction_insilico",
+      "is_injected_error": true,
+      "expected_truth": "Likely benign",
+      "proposed_classification": "Likely pathogenic",
+      "note": "Tolerated in-silico + somewhat common; proposed LP contradicts evidence.",
+      "variant": {"genome": "GRCh38", "chrom": "5", "pos": 112800000, "ref": "A", "alt": "G", "gene": "APC", "hgvs_p": "p.Ile1307Val"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "1.2%", "source_quote": "Global AF: 0.012.", "data": {"allele_frequency": 0.012}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.22.", "data": {"ensemble_score": 0.22}},
+        {"source": "ClinVar", "summary": "Likely benign", "source_quote": "Germline classification: Likely benign.", "source_id": "VCV000182000", "data": {"clinvar_classification": "Likely benign", "review_status_conflicting": false, "same_aa_change_pathogenic": false}, "source_last_updated": "2025-10-10"}
+      ]
+    },
+    {
+      "id": "control-pathogenic-brca1-01",
+      "error_type": "control_correct",
+      "is_injected_error": false,
+      "expected_truth": "Pathogenic",
+      "proposed_classification": "Pathogenic",
+      "note": "Correct pathogenic call; Reviewer2 should NOT raise a classification disagreement.",
+      "variant": {"genome": "GRCh38", "chrom": "17", "pos": 43094000, "ref": "G", "alt": "A", "gene": "BRCA1", "hgvs_p": "p.Trp1815*"},
+      "evidence": [
+        {"source": "VEP", "summary": "stop gained", "source_quote": "Consequence: stop_gained.", "data": {"consequence": "stop_gained"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}},
+        {"source": "computational", "summary": "damaging", "source_quote": "Ensemble score: 0.95.", "data": {"ensemble_score": 0.95}},
+        {"source": "ClinVar", "summary": "Pathogenic", "source_quote": "Germline classification: Pathogenic.", "source_id": "VCV000055000", "data": {"clinvar_classification": "Pathogenic", "review_status_conflicting": false, "same_aa_change_pathogenic": true}, "source_last_updated": "2026-02-01"}
+      ]
+    },
+    {
+      "id": "control-benign-common-01",
+      "error_type": "control_correct",
+      "is_injected_error": false,
+      "expected_truth": "Benign",
+      "proposed_classification": "Benign",
+      "note": "Correct benign call on a common variant; no disagreement expected.",
+      "variant": {"genome": "GRCh38", "chrom": "13", "pos": 32340301, "ref": "T", "alt": "C", "gene": "BRCA2", "hgvs_p": "p.Val2466Ala"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "common", "source_quote": "Global AF: 0.262.", "data": {"allele_frequency": 0.262}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.05.", "data": {"ensemble_score": 0.05}},
+        {"source": "ClinVar", "summary": "Benign", "source_quote": "Germline classification: Benign.", "source_id": "VCV000038266", "data": {"clinvar_classification": "Benign", "review_status_conflicting": false, "same_aa_change_pathogenic": false}, "source_last_updated": "2025-06-01"}
+      ]
+    },
+    {
+      "id": "control-vus-01",
+      "error_type": "control_correct",
+      "is_injected_error": false,
+      "expected_truth": "Uncertain significance",
+      "proposed_classification": "Uncertain significance",
+      "note": "Genuinely uncertain (rare missense, intermediate in-silico); VUS is correct.",
+      "variant": {"genome": "GRCh38", "chrom": "16", "pos": 23600000, "ref": "C", "alt": "G", "gene": "PALB2", "hgvs_p": "p.Pro8Arg"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "rare", "source_quote": "Global AF: 5e-5.", "data": {"allele_frequency": 5e-05}},
+        {"source": "computational", "summary": "intermediate", "source_quote": "Ensemble score: 0.5.", "data": {"ensemble_score": 0.5}},
+        {"source": "ClinVar", "summary": "VUS", "source_quote": "Germline classification: Uncertain significance.", "source_id": "VCV000230000", "data": {"clinvar_classification": "Uncertain significance", "review_status_conflicting": false, "same_aa_change_pathogenic": false}, "source_last_updated": "2026-01-05"}
+      ]
+    },
+    {
+      "id": "control-benign-likelybenign-01",
+      "error_type": "control_correct",
+      "is_injected_error": false,
+      "expected_truth": "Likely benign",
+      "proposed_classification": "Likely benign",
+      "note": "Tolerated in-silico, modest frequency; LB correct.",
+      "variant": {"genome": "GRCh38", "chrom": "5", "pos": 112800000, "ref": "A", "alt": "G", "gene": "APC", "hgvs_p": "p.Ile1307Val"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "1.2%", "source_quote": "Global AF: 0.012.", "data": {"allele_frequency": 0.012}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.22.", "data": {"ensemble_score": 0.22}},
+        {"source": "ClinVar", "summary": "Likely benign", "source_quote": "Germline classification: Likely benign.", "source_id": "VCV000182000", "data": {"clinvar_classification": "Likely benign", "review_status_conflicting": false, "same_aa_change_pathogenic": false}, "source_last_updated": "2025-10-10"}
+      ]
+    }
+  ]
+}
