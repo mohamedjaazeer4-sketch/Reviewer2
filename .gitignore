@@ -28,3 +28,6 @@ venv/
 # Repro artifacts
 eval/results/*.json
 !eval/results/.gitkeep
+
+# VHS tape script (build artifact for regenerating demo.gif, not needed in repo)
+demo.tape
