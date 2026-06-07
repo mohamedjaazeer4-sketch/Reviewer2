@@ -22,6 +22,9 @@ venv/
 .idea/
 .vscode/
 
+# Claude Code local settings (contains machine-specific permissions, never commit)
+.claude/
+
 # Repro artifacts
 eval/results/*.json
 !eval/results/.gitkeep
