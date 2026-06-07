@@ -36,6 +36,31 @@ $ make demo
 
 ---
 
+## Technology stack
+
+| Layer | Technology | Where in the code |
+|---|---|---|
+| **Agentic graph** | LangGraph `StateGraph` | `pipeline.py` — 4-node graph, typed `ReviewState`, compiled and invoked |
+| **LLM integration** | Ollama · Anthropic · OpenAI · Gemini | `llm.py` — provider-agnostic `LLMClient` protocol, graceful fallback to deterministic template |
+| **MCP server** | FastMCP (Model Context Protocol) | `mcp_server/server.py` — two registered tools (`get_evidence`, `review_variant_tool`) on stdio transport; any MCP-aware agent can call them |
+| **Retrieval layer** | Pluggable `EvidenceProvider` protocol | `evidence.py` — fetch node retrieves structured evidence from ClinVar / gnomAD / VEP; the seam is identical to a RAG retriever |
+| **Typed domain** | Pydantic v2 with model validators | `models.py` — `ReviewRequest`, `EvidenceItem`, `ACMGCriterion`, `ReviewDossier`; a validator enforces "no criterion fired without attached evidence" at runtime |
+| **Deterministic reasoning** | Pure Python rules engine | `acmg/rules.py` — Richards 2015 Table 5, LLM-free; `acmg/scorer.py` — ClinGen SVI decision tree for PVS1 strength |
+| **CLI** | Typer + Rich | `cli.py` — `reviewer2 review` and `reviewer2 demo` |
+| **Evaluation** | Custom harness | `eval/errorcatch.py` (flagging behavior) + `eval/concordance.py` (accuracy vs expert panel) |
+
+### Design decisions worth noting
+
+**LLM role is strictly bounded.** The classification verdict comes from the deterministic rules engine. The LLM only polishes the human-readable summary. This makes the output reproducible, auditable, and independent of which LLM provider is available.
+
+**MCP as a producer, not just a consumer.** Most genomics code calls external APIs. This repo ships an MCP server so that other agents — Claude Desktop, VS Code Copilot, a LangGraph agent — can call the gnomAD/ClinVar tools and the full ACMG second-review as first-class tools.
+
+**Retrieval is structured, not semantic.** The `EvidenceProvider` protocol is the retrieval layer in a RAG pattern. Evidence items carry a literal `source_quote` field so every claim is grounded in the original source text. Semantic search over PubMed is explicitly deferred to v1.1 — the retriever seam is already in place to plug it in.
+
+**Providers are injected throughout.** Both the evidence provider and the LLM client are injected into the graph at build time. This is why the eval runs fully offline and deterministically without any API keys, and why swapping in a live ClinVar/gnomAD provider is a one-line change.
+
+---
+
 ## How it works
 
 ```mermaid
