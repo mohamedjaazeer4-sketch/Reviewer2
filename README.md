@@ -1,21 +1,30 @@
 # Reviewer2
 
-![CI](https://github.com/ankurgenomics/reviewer2/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/ankurgenomics/Reviewer2/actions/workflows/ci.yml/badge.svg)
 
-A second-reviewer tool for germline ACMG/AMP variant classification. It independently re-derives
-the ACMG call from structured evidence, grounds every fired criterion in a literal source quote,
-and flags where the proposed classification disagrees with current data.
+**An AI second-reviewer for germline ACMG/AMP variant classification.**
 
-Clinical labs already run a second reviewer on variant calls — it is required by CAP/CLIA. The
-problem is that the evidence underneath a variant changes constantly. ClinVar submitters disagree,
-"pathogenic" calls get downgraded, VUS get reclassified months before anyone re-pulls them. A human
-reviewer working from a static report misses all of that. This tool does not replace the human; it
-makes the human faster and harder to fool.
+Clinical genetics labs are required by CAP/CLIA to put every variant call through a second reviewer before it reaches a patient report. That reviewer is checking whether the ACMG criteria were applied correctly and whether the evidence still holds. The problem is that evidence moves. ClinVar submitters disagree. "Pathogenic" calls get quietly downgraded. VUS get reclassified months before any pipeline re-pulls them. A human working from a static report never sees any of that.
+
+Reviewer2 takes a variant and a proposed classification, independently re-derives the ACMG call from current evidence, and tells you exactly where the two calls differ and why — with the specific source sentence behind every criterion it fires. It does not replace the second reviewer. It makes sure the second reviewer is looking at the right thing.
+
+---
+
+## What it catches
+
+Three real error classes, reproduced by `make demo` with no API keys:
+
+**Stale evidence.** A BRCA1 frameshift called Uncertain significance 818 days ago. ClinVar has since accumulated expert-panel evidence placing it firmly Pathogenic. The pipeline never re-ran. Reviewer2 re-derives the call as Pathogenic, flags the staleness, and blocks sign-off.
+
+**Overcall on a common variant.** A PCSK9 variant proposed as Likely pathogenic. gnomAD shows it at population frequency well above the BA1/BS1 threshold — it should be Benign. Reviewer2 catches the direction error.
+
+**Undercall of a null variant.** A TP53 stop-gain absent from gnomAD, proposed as VUS. PVS1 at Very Strong plus PM2 at Moderate independently reaches Pathogenic. Reviewer2 flags it as a cross-band undercall.
 
 ```
 $ make demo
 
  BRCA1 c.5266dupC / p.Gln1756fs  GRCh38:17:43094692
+ ─────────────────────────────────────────────────────
  Independent call : Pathogenic
  Proposed call    : Uncertain significance
  Disagreement     : CRITICAL — crosses the clinical action boundary (act vs. monitor)
@@ -27,37 +36,78 @@ $ make demo
 
  Conflicts flagged
   CLASSIFICATION_DISAGREEMENT [CRITICAL]
-    Reviewer2 call Pathogenic vs proposed Uncertain significance; different
-    clinical action bands. Proposed call needs review before sign-off.
+    Reviewer2 call Pathogenic vs proposed Uncertain significance — different
+    clinical action bands. Proposed call must be reviewed before sign-off.
   STALE_EVIDENCE [MAJOR]
-    ClinVar record is 818 days old relative to retrieval. May have been
-    reclassified since the proposed call was made.
+    ClinVar record is 818 days old relative to retrieval. This call may predate
+    a reclassification.
 ```
+
+---
+
+## What makes this different
+
+**The classification is deterministic, not LLM-generated.** The ACMG 2015 combining rules (Richards et al., Table 5) are implemented directly in Python. The LLM has no role in the verdict — it can optionally polish the prose summary, but the same inputs always produce the same classification. This is auditable and reproducible in a way that an end-to-end LLM approach is not.
+
+**Every criterion is grounded in a source quote.** A Pydantic validator makes it a runtime error to fire any criterion without an attached evidence item carrying the literal sentence from the source. A reviewer can verify any claim without trusting a model.
+
+**It reports false-positive rate, not just catch rate.** Most genomics tools only report sensitivity. Reviewer2 ships with ErrorCatch, an evaluation harness that injects known errors and measures both the catch rate and the rate of blocking correct calls unnecessarily. An AI second-reviewer that generates noise is worse than no second-reviewer at all.
+
+---
+
+## Evaluation
+
+### ErrorCatch — does it flag the right errors?
+
+| Error type | Caught |
+|---|:---:|
+| Stale ClinVar record (call made before reclassification) | 2 / 2 |
+| ClinVar submitter conflict hidden by a single proposed call | 1 / 1 |
+| Overcall on a common variant (BA1/BS1 should fire) | 2 / 2 |
+| Undercall on a null variant in a LoF-intolerant gene | 2 / 2 |
+| In-silico evidence applied in the wrong direction | 1 / 1 |
+| **Total** | **8 / 8 (95% CI 68%–100%)** |
+
+False-positive rate on 4 correct controls: **0% (95% CI 0%–49%)**
+
+ErrorCatch measures flagging behavior, not classification accuracy. The wide CIs reflect sample size honestly — this is a methodology demonstration. The test set is fully inspectable in `eval/errorcatch_testset.json`.
+
+Reproduced by `make eval`.
+
+### Concordance — does the engine agree with expert panels?
+
+This is the harder question: given only population and computational evidence, does the engine's independent ACMG call match expert-panel (ClinGen VCEP / 3-star ClinVar) classifications it never saw?
+
+| Metric | Result | 95% CI |
+|---|:---:|:---:|
+| Action-band concordance | 86% | 60%–96% |
+| In-scope exact concordance | 82% | 52%–95% |
+| Exact concordance (5-tier, all 14 cases) | 64% | 39%–84% |
+
+"In-scope" means the 11 of 14 cases the v1 engine is designed to handle. The 3 out-of-scope misses are variants where the expert call rests on functional assay (PS3) or segregation (PP1) data — criteria v1 does not implement because no public API provides that data. Those cases are included in the denominator, not hidden.
+
+No in-scope case crosses the clinical action boundary in the wrong direction.
+
+Reproduced by `make concordance`.
 
 ---
 
 ## Technology stack
 
-| Layer | Technology | Where in the code |
+| Layer | Technology | Where |
 |---|---|---|
-| **Agentic graph** | LangGraph `StateGraph` | `pipeline.py` — 4-node graph, typed `ReviewState`, compiled and invoked |
-| **LLM integration** | Ollama · Anthropic · OpenAI · Gemini | `llm.py` — provider-agnostic `LLMClient` protocol, graceful fallback to deterministic template |
-| **MCP server** | FastMCP (Model Context Protocol) | `mcp_server/server.py` — two registered tools (`get_evidence`, `review_variant_tool`) on stdio transport; any MCP-aware agent can call them |
-| **Retrieval layer** | Pluggable `EvidenceProvider` protocol | `evidence.py` — fetch node retrieves structured evidence from ClinVar / gnomAD / VEP; the seam is identical to a RAG retriever |
-| **Typed domain** | Pydantic v2 with model validators | `models.py` — `ReviewRequest`, `EvidenceItem`, `ACMGCriterion`, `ReviewDossier`; a validator enforces "no criterion fired without attached evidence" at runtime |
-| **Deterministic reasoning** | Pure Python rules engine | `acmg/rules.py` — Richards 2015 Table 5, LLM-free; `acmg/scorer.py` — ClinGen SVI decision tree for PVS1 strength |
-| **CLI** | Typer + Rich | `cli.py` — `reviewer2 review` and `reviewer2 demo` |
-| **Evaluation** | Custom harness | `eval/errorcatch.py` (flagging behavior) + `eval/concordance.py` (accuracy vs expert panel) |
+| Agentic graph | LangGraph `StateGraph` | `pipeline.py` — 4-node graph, typed `ReviewState`, compiled and invoked |
+| LLM integration | Ollama · Anthropic · OpenAI · Gemini | `llm.py` — provider-agnostic protocol, graceful fallback to deterministic template |
+| MCP server | FastMCP (Model Context Protocol) | `mcp_server/server.py` — `get_evidence` and `review_variant_tool` on stdio transport |
+| Retrieval layer | Pluggable `EvidenceProvider` protocol | `evidence.py` — fetch node pulls from ClinVar / gnomAD / VEP; same seam as a RAG retriever |
+| Typed domain | Pydantic v2 with model validators | `models.py` — validator enforces "no criterion fired without attached evidence" at runtime |
+| Deterministic reasoning | Pure Python rules engine | `acmg/rules.py` — Richards 2015 Table 5; `acmg/scorer.py` — ClinGen SVI PVS1 decision tree |
+| CLI | Typer + Rich | `cli.py` — `reviewer2 review` and `reviewer2 demo` |
+| Evaluation | Custom harness | `eval/errorcatch.py` + `eval/concordance.py` |
 
-### Design decisions worth noting
+**MCP as a producer, not just a consumer.** Most genomics code calls external APIs. This repo ships an MCP server so that any MCP-aware agent — Claude Desktop, VS Code Copilot, a LangGraph orchestrator — can call the gnomAD/ClinVar evidence fetch and the full ACMG second-review as first-class tools.
 
-**LLM role is strictly bounded.** The classification verdict comes from the deterministic rules engine. The LLM only polishes the human-readable summary. This makes the output reproducible, auditable, and independent of which LLM provider is available.
-
-**MCP as a producer, not just a consumer.** Most genomics code calls external APIs. This repo ships an MCP server so that other agents — Claude Desktop, VS Code Copilot, a LangGraph agent — can call the gnomAD/ClinVar tools and the full ACMG second-review as first-class tools.
-
-**Retrieval is structured, not semantic.** The `EvidenceProvider` protocol is the retrieval layer in a RAG pattern. Evidence items carry a literal `source_quote` field so every claim is grounded in the original source text. Semantic search over PubMed is explicitly deferred to v1.1 — the retriever seam is already in place to plug it in.
-
-**Providers are injected throughout.** Both the evidence provider and the LLM client are injected into the graph at build time. This is why the eval runs fully offline and deterministically without any API keys, and why swapping in a live ClinVar/gnomAD provider is a one-line change.
+**Providers injected throughout.** Both the evidence provider and the LLM client are injected into the LangGraph graph at build time. The eval runs fully offline and deterministically with no API keys. Swapping in a live ClinVar/gnomAD provider is a one-line change.
 
 ---
 
@@ -80,111 +130,39 @@ flowchart LR
     Ollama / cloud / template"}}
 ```
 
-The classification is deterministic and LLM-free. The engine implements Richards et al. (2015)
-Table 5 combining rules directly — PVS/PS/PM/PP/BA/BS/BP counts, contradictory evidence resolves
-to VUS. An LLM can optionally polish the human-readable summary, but it cannot touch the verdict.
+**Action-band conflict gating.** Pathogenic and Likely pathogenic lead to the same clinical management. Reviewer2 only raises a blocking disagreement when two calls fall in different clinical action bands (act / monitor / do not act). A P-vs-LP difference is recorded but does not block sign-off — because the most damaging thing a second-reviewer can do is generate noise.
 
-Three ideas do the structural work:
-
-**No claim without a source.** A Pydantic validator makes it a runtime error to mark a criterion
-as met without an attached evidence item. Every evidence item carries the literal sentence from
-the source. A reviewer can verify any claim in under a minute.
-
-**Action-band conflict gating.** Pathogenic and Likely pathogenic lead to the same clinical
-management. The tool only raises a blocking disagreement when two calls fall in different bands
-(act / monitor / do not act). A P-vs-LP difference is recorded but does not block sign-off. This
-matters because the most costly thing a second reviewer can do is generate noise.
-
-**Provenance hash.** Every dossier carries a `sha256[:16]` over the variant, evidence fingerprint,
-fired criteria, and engine version. Identical inputs produce an identical hash, which is enforced
-by a test. You can audit any dossier and reproduce it.
-
----
-
-## Evaluation
-
-### ErrorCatch
-
-ErrorCatch asks a specific question: given a variant with an injected classification error, does
-the second-reviewer flag it? It does not measure whether the engine's independent call is
-clinically correct — that is what the Concordance eval below is for. The two evals are kept
-separate on purpose.
-
-The test set has 8 injected errors and 4 correct controls. The injected errors cover the five
-error classes most common in real variant interpretation workflows.
-
-| Error type | Caught |
-|---|:---:|
-| Stale ClinVar record (call made before reclassification) | 2 / 2 |
-| ClinVar submitter conflict hidden by a single proposed call | 1 / 1 |
-| Overcall on a common variant (BA1/BS1 should fire) | 2 / 2 |
-| Undercall on a null variant in a LoF-intolerant gene | 2 / 2 |
-| In-silico evidence applied in the wrong direction | 1 / 1 |
-| **Total** | **8 / 8 (95% CI 68%–100%)** |
-
-False-positive rate on 4 correct controls: **0% (95% CI 0%–49%)**
-
-The wide CI on both numbers reflects the sample size. This is a methodology demonstration, not
-a published benchmark. The test set is hand-curated, fully inspectable, and self-contained in
-`eval/errorcatch_testset.json`.
-
-Reproduced by `make eval`. Results written to `eval/results/errorcatch.json`.
-
-### Concordance
-
-Concordance measures accuracy against an external gold standard — expert-panel (ClinGen VCEP /
-3-star ClinVar) classifications that the engine never sees. This is the harder question: given
-only population and computational evidence, does the engine agree with the expert?
-
-| Metric | Result | 95% CI |
-|---|:---:|:---:|
-| Exact concordance (5-tier) | 64% | 39%–84% |
-| Action-band concordance | 86% | 60%–96% |
-| In-scope exact concordance | 82% | 52%–95% |
-
-"In-scope" means the 11 of 14 cases the v1 engine is designed to handle. The 3 out-of-scope
-cases are pathogenic by functional assay (PS3) or segregation (PP1) alone — criteria v1 does
-not implement because no public API provides the data. Those are reported honestly rather than
-hidden from the denominator.
-
-The 18% exact miss rate on in-scope cases breaks down as: two B/LB calls where the engine
-reaches LB/LP instead of the expert's B/P (same action band, one-tier miss). No in-scope case
-crosses the clinical action boundary in the wrong direction.
-
-Reproduced by `make concordance`. Results written to `eval/results/concordance.json`.
+**Provenance hash.** Every dossier carries a `sha256[:16]` over the variant, evidence fingerprint, fired criteria, and engine version. Identical inputs produce an identical hash, enforced by a test.
 
 ---
 
 ## Quick start
 
 ```bash
-git clone <repo>
-cd reviewer2
+git clone https://github.com/ankurgenomics/Reviewer2.git
+cd Reviewer2
 
-uv sync                 # installs from the committed lockfile — fully reproducible
-make demo               # 3 offline fixture cases, no API keys needed
-make eval               # ErrorCatch: 8/8 caught, 0% false positives
+uv sync                 # installs from the committed lockfile
+make demo               # 3 cases offline, no API keys needed
+make eval               # ErrorCatch
 make concordance        # concordance vs expert-panel ClinVar
 make test               # 21 tests
-make lint               # ruff
-make typecheck          # mypy, 12 source files
+make lint && make typecheck
 ```
 
-To review a specific variant:
+Review a specific variant:
 
 ```bash
 uv run reviewer2 review \
     --chrom 17 --pos 43094692 --ref A --alt AC --gene BRCA1 \
-    --proposed pathogenic
+    --proposed uncertain_significance
 ```
 
-Use a local LLM to polish the prose summary (the classification itself stays deterministic):
+With a local or cloud LLM for the prose summary (classification stays deterministic):
 
 ```bash
-# requires Ollama running locally
 uv run reviewer2 demo --llm ollama
 
-# or a cloud provider
 uv sync --extra cloud
 REVIEWER2_LLM_PROVIDER=anthropic ANTHROPIC_API_KEY=<key> uv run reviewer2 demo
 ```
@@ -193,25 +171,22 @@ REVIEWER2_LLM_PROVIDER=anthropic ANTHROPIC_API_KEY=<key> uv run reviewer2 demo
 
 ## MCP server
 
-The gnomAD/ClinVar tools are also exposed as an MCP server, so any MCP-aware agent can call
-them directly.
-
 ```bash
 uv sync --extra mcp
-make mcp                # starts on stdio transport
+make mcp
 ```
 
-Tools exposed: `get_evidence(variant)` and `review_variant(variant, proposed_classification)`.
+Tools: `get_evidence(variant)` returns structured gnomAD/ClinVar/VEP evidence with source quotes. `review_variant_tool(variant, proposed_classification)` returns the full dossier as JSON.
 
-Wire it into an MCP host by pointing the host at `uv run python -m mcp_server.server`.
+Point an MCP host at `uv run python -m mcp_server.server`.
 
 ---
 
 ## What the engine implements
 
-| Criterion | Data source | Strength used |
+| Criterion | Source | Strength |
 |---|---|:---:|
-| PVS1 | VEP consequence + gene | Very Strong (default); Strong / Moderate / Supporting if NMD/transcript hints present |
+| PVS1 | VEP consequence + gene | Very Strong (default); downgraded by NMD/transcript context |
 | PS1 | ClinVar same amino-acid change | Strong |
 | PM2 | gnomAD popmax AF | Moderate |
 | PP3 | Ensemble in-silico score >= 0.7 | Supporting |
@@ -219,10 +194,7 @@ Wire it into an MCP host by pointing the host at `uv run python -m mcp_server.se
 | BA1 | gnomAD AF > 5% | Stand-alone Benign |
 | BS1 | 1% < gnomAD AF <= 5% | Strong |
 
-Criteria that need functional assay data (PS3/BS3), segregation (PP1/BS4), or de novo status
-(PM6/PS2) are not implemented in v1. The evidence is not available from public population
-databases. The concordance eval includes cases where those criteria drive the expert call, and
-reports them as known blind spots.
+Criteria requiring functional assay data (PS3/BS3), segregation (PP1/BS4), or de novo status (PM6/PS2) are not in v1 — the data is not available from public APIs. The concordance eval includes these cases and reports them as known blind spots.
 
 ---
 
@@ -236,52 +208,29 @@ src/reviewer2/
     scorer.py     — evidence → fired criteria (PVS1 SVI tree, PM2, PS1, PP3/BP4, BA1/BS1)
   conflicts.py    — detect_conflicts: classification disagreement, stale evidence, submitter conflict
   pipeline.py     — 4-node LangGraph graph (normalise → fetch → score → detect)
-  evidence.py     — EvidenceProvider protocol + fixture / live / MCP providers
+  evidence.py     — EvidenceProvider protocol + fixture / live providers
   llm.py          — provider-agnostic LLM client (template / Ollama / cloud), never crashes
   summary.py      — deterministic prose + provenance_hash
-  cli.py          — Typer + Rich CLI (reviewer2 review / demo)
+  cli.py          — Typer + Rich CLI
 
 eval/
-  errorcatch.py          — catch-rate + false-positive-rate harness
-  errorcatch_testset.json
-  concordance.py         — concordance vs expert-panel ClinVar gold standard
-  concordance_testset.json
-  results/               — errorcatch.json, concordance.json (regenerated by make eval/concordance)
-  fixtures/
-    evidence.json        — offline evidence for the 3 demo variants
+  errorcatch.py / errorcatch_testset.json   — flagging behavior harness
+  concordance.py / concordance_testset.json — accuracy vs expert-panel ClinVar
+  fixtures/evidence.json                    — offline evidence for demo cases
 
-mcp_server/server.py     — FastMCP server: get_evidence + review_variant_tool
-tests/                   — 21 pytest tests (rules, pipeline, eval)
+mcp_server/server.py   — FastMCP server
+tests/                 — 21 pytest tests
 ```
 
 ---
 
-## Toolchain
+## Scope and limitations
 
-`uv` for dependency management, committed lockfile for reproducibility. `ruff` for linting,
-`mypy` for type checking, `pytest` for tests. All pass clean. `langgraph` for the graph,
-`pydantic v2` for the typed domain, `typer` + `rich` for the CLI.
+Germline ACMG/AMP only. Somatic tiering (AMP/ASCO/CAP) is not in scope for v1.
 
-Optional cloud LLM extras (`anthropic`, `openai`, `gemini`) are all isolated behind extras
-so the default install stays lean and offline-capable.
+Evidence in v1 comes from offline fixtures. `LiveEvidenceProvider` in `evidence.py` marks exactly where ClinVar, gnomAD, and VEP calls plug in — that is v1.1 work.
 
----
-
-## Scope and honest limitations
-
-This is a germline-only tool. Somatic (AMP/ASCO/CAP) tiering uses a different rubric and is
-not in scope.
-
-Evidence in v1 comes from offline fixtures or the live provider stub. The `LiveEvidenceProvider`
-in `evidence.py` marks exactly where ClinVar, gnomAD, and VEP API calls plug in. That is v1.1
-work.
-
-The eval sets are hand-curated and small. They demonstrate the methodology and are honest about
-their size. A production system would need a stratified set drawn from ClinVar conflicting
-interpretations at scale.
-
-Not a clinical device. Not validated for diagnostic use. Should not drive patient care without
-qualified human sign-off.
+Not a clinical device. Not validated for diagnostic use. Must not drive patient care without qualified human sign-off.
 
 ---
 
