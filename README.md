@@ -39,10 +39,6 @@
 
 </div>
 
-<div align="center">
-  <img src="docs/demo.svg" alt="Reviewer2 demo — three variant cases classified and flagged" width="860" />
-</div>
-
 ---
 
 **Reviewer2 is an autonomous second-reviewer for germline ACMG/AMP variant classification.** It takes a variant and a proposed clinical classification, independently re-derives the ACMG call from current evidence using a deterministic rules engine, and tells you exactly where the calls differ — with the specific source sentence grounding every criterion it fires.
