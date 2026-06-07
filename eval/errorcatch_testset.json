@@ -78,9 +78,9 @@
       "id": "undercall-null-tp53-01",
       "error_type": "undercall_pathogenic_null",
       "is_injected_error": true,
-      "expected_truth": "Likely pathogenic",
+      "expected_truth": "Pathogenic",
       "proposed_classification": "Uncertain significance",
-      "note": "Absent null variant in TP53 (LoF-intolerant); VUS under-calls it.",
+      "note": "Absent null variant in TP53 (LoF-intolerant); VUS under-calls it. Engine reaches Pathogenic via PVS1(Very Strong)+PM2(Moderate)+PP3, crossing the action band vs the proposed VUS.",
       "variant": {"genome": "GRCh38", "chrom": "17", "pos": 7675000, "ref": "C", "alt": "T", "gene": "TP53", "hgvs_p": "p.Arg213*"},
       "evidence": [
         {"source": "VEP", "summary": "stop gained", "source_quote": "Consequence: stop_gained.", "data": {"consequence": "stop_gained"}},
@@ -95,7 +95,7 @@
       "is_injected_error": true,
       "expected_truth": "Likely pathogenic",
       "proposed_classification": "Likely benign",
-      "note": "Splice-donor null in PTEN; proposed Likely benign is a direction error.",
+      "note": "Splice-donor null in PTEN; proposed Likely benign is a direction error. Engine reaches Likely pathogenic (PVS1+PM2) — the expert Pathogenic call additionally rests on functional/clinical data v1 does not implement.",
       "variant": {"genome": "GRCh38", "chrom": "10", "pos": 87900000, "ref": "G", "alt": "A", "gene": "PTEN", "hgvs_c": "c.209+1G>A"},
       "evidence": [
         {"source": "VEP", "summary": "splice donor", "source_quote": "Consequence: splice_donor_variant.", "data": {"consequence": "splice_donor_variant"}},

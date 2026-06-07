@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from reviewer2 import ReviewRequest, Variant, review_variant
+from reviewer2.acmg.rules import classify
 from reviewer2.acmg.scorer import score_criteria
 from reviewer2.evidence import FixtureEvidenceProvider
 from reviewer2.models import (
@@ -62,6 +63,36 @@ def test_pvs1_only_in_lof_gene():
     not_gene = Variant(chrom="1", pos=100, ref="A", alt="T", gene="MADEUP1")
     assert {c.code: c for c in score_criteria(in_gene, ev)}["PVS1"].met is True
     assert {c.code: c for c in score_criteria(not_gene, ev)}["PVS1"].met is False
+
+
+def test_clean_null_reaches_likely_pathogenic_without_ps1():
+    """Regression for the postmortem under-call bug: a clean null variant absent from
+    gnomAD must reach at least Likely pathogenic on PVS1(Very Strong)+PM2(Moderate)
+    alone — WITHOUT relying on a fabricated same-amino-acid (PS1) flag."""
+    v = Variant(chrom="17", pos=7675000, ref="C", alt="T", gene="TP53", hgvs_p="p.Arg213*")
+    ev = [
+        _evidence(source=EvidenceSource.VEP, consequence="stop_gained"),
+        _evidence(source=EvidenceSource.GNOMAD, allele_frequency=0.0),
+    ]
+    crits = {c.code: c for c in score_criteria(v, ev)}
+    assert crits["PVS1"].met is True
+    assert crits["PVS1"].strength == CriterionStrength.VERY_STRONG
+    independent = classify(list(crits.values()))
+    assert independent in (
+        ACMGClassification.LIKELY_PATHOGENIC,
+        ACMGClassification.PATHOGENIC,
+    )
+
+
+def test_pvs1_downgrades_on_nmd_escape_hint():
+    """Transcript/NMD context downgrades PVS1 strength (ClinGen SVI tree)."""
+    v = Variant(chrom="17", pos=43093464, ref="A", alt="T", gene="BRCA1")
+    ev = [
+        _evidence(source=EvidenceSource.VEP, consequence="stop_gained", in_last_exon=True),
+    ]
+    pvs1 = {c.code: c for c in score_criteria(v, ev)}["PVS1"]
+    assert pvs1.met is True
+    assert pvs1.strength == CriterionStrength.STRONG
 
 
 def test_pipeline_flags_stale_clinvar():

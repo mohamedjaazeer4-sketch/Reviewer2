@@ -186,3 +186,12 @@ def materially_disagree(
     wolf on calls that are clinically equivalent.
     """
     return _ACTION_BAND[a] != _ACTION_BAND[b]
+
+
+def action_band(c: ACMGClassification) -> int:
+    """Public accessor for a classification's clinical action band.
+
+    0 = do not act (B/LB), 1 = monitor (VUS), 2 = act (LP/P). Two calls in the same
+    band imply the same clinical management.
+    """
+    return _ACTION_BAND[c]

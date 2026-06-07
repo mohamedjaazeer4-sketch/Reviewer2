@@ -10,9 +10,11 @@ Neither uses an LLM. This is the auditable core of Reviewer2.
 
 from reviewer2.acmg.rules import (
     ENGINE_VERSION,
+    action_band,
     classify,
     crosses_clinical_actionability,
     disagreement_score,
+    materially_disagree,
 )
 from reviewer2.acmg.scorer import score_criteria
 
@@ -21,5 +23,7 @@ __all__ = [
     "score_criteria",
     "disagreement_score",
     "crosses_clinical_actionability",
+    "materially_disagree",
+    "action_band",
     "ENGINE_VERSION",
 ]

@@ -49,10 +49,50 @@ LOF_INTOLERANT_GENES = {
     "APC", "RB1", "NF1", "VHL", "STK11", "CDH1", "PALB2",
 }
 
+# Consequence classes that are *unambiguous* predicted loss-of-function. Canonical
+# splice means the ±1,2 dinucleotide; broader splice-region calls are NOT included
+# here because their impact is uncertain without splicing prediction.
 NULL_CONSEQUENCES = {
     "frameshift", "stop_gained", "nonsense", "splice_donor",
     "splice_acceptor", "start_lost",
 }
+
+
+def pvs1_strength(
+    consequence: str,
+    gene: str | None,
+    data: dict[str, str | float | int | bool | None] | None = None,
+) -> CriterionStrength | None:
+    """Assign PVS1 strength via a simplified ClinGen SVI / Abou Tayoun (2018) tree.
+
+    Returns the strength PVS1 should fire at, or ``None`` if PVS1 does not apply.
+
+    The base call for an unambiguous null (stop-gain / frameshift / start-loss /
+    canonical ±1,2 splice) in a LoF-intolerant gene is **Very Strong**. We then
+    *downgrade* using any structured hints the evidence provider supplies — this is
+    where transcript / NMD / exon context belongs:
+
+    * ``nmd_escape`` or ``in_last_exon`` true  -> Strong   (truncation may escape NMD)
+    * ``not_biologically_relevant_transcript`` -> Moderate (wrong transcript context)
+    * ``rescue_transcript`` true               -> Supporting
+
+    When no hints are present we return **Very Strong**, which is the correct default
+    for a clean null in a known haploinsufficient gene. (v1 deliberately does NOT try
+    to infer NMD/exon context itself; that requires the live VEP provider — v1.1.)
+    """
+    data = data or {}
+    is_null = any(nc in consequence for nc in NULL_CONSEQUENCES)
+    if not (is_null and gene in LOF_INTOLERANT_GENES):
+        return None
+
+    if data.get("rescue_transcript") is True:
+        return CriterionStrength.SUPPORTING
+    if data.get("not_biologically_relevant_transcript") is True:
+        return CriterionStrength.MODERATE
+    if data.get("nmd_escape") is True or data.get("in_last_exon") is True:
+        return CriterionStrength.STRONG
+    return CriterionStrength.VERY_STRONG
+
 
 
 def _af(evidence: list[EvidenceItem]) -> tuple[float | None, EvidenceItem | None]:
@@ -103,22 +143,24 @@ def score_criteria(variant: Variant, evidence: list[EvidenceItem]) -> list[ACMGC
     consequence, cons_ev = _consequence(evidence)
     clinvar_ev = _clinvar(evidence)
 
-    # ---- PVS1: null variant in a LoF-intolerant gene (down-weighted to Supporting) ----
-    pvs1_met = bool(
-        consequence
-        and any(nc in consequence for nc in NULL_CONSEQUENCES)
-        and variant.gene in LOF_INTOLERANT_GENES
+    # ---- PVS1: null variant in a LoF-intolerant gene (strength via SVI tree) ----
+    pvs1_strength_val = (
+        pvs1_strength(consequence, variant.gene, cons_ev.data if cons_ev else None)
+        if consequence
+        else None
     )
+    pvs1_met = pvs1_strength_val is not None
     criteria.append(
         ACMGCriterion(
             code="PVS1",
             direction=CriterionDirection.PATHOGENIC,
-            # ClinGen SVI: without confirmed transcript/exon context, cap strength.
-            strength=CriterionStrength.SUPPORTING,
+            # Default Very Strong for a clean null; downgraded by transcript/NMD hints.
+            strength=pvs1_strength_val or CriterionStrength.VERY_STRONG,
             met=pvs1_met,
             rationale=(
-                f"{consequence} in LoF-intolerant gene {variant.gene}; strength capped at "
-                "Supporting per ClinGen SVI without confirmed transcript context."
+                f"{consequence} in LoF-intolerant gene {variant.gene}; PVS1 applied at "
+                f"{pvs1_strength_val.value if pvs1_strength_val else 'n/a'} strength "
+                "(ClinGen SVI / Abou Tayoun 2018 decision tree)."
                 if pvs1_met
                 else "Not a qualifying null variant in a known LoF-intolerant gene."
             ),
@@ -146,13 +188,17 @@ def score_criteria(variant: Variant, evidence: list[EvidenceItem]) -> list[ACMGC
         )
     )
 
-    # ---- PM2 (Supporting): absent or ultra-rare in gnomAD ----
+    # ---- PM2 (Moderate): absent or ultra-rare in gnomAD ----
+    # ACMG 2015 lists PM2 as Moderate. ClinGen SVI later recommended Supporting; we
+    # keep Moderate as the engine default and expose the threshold/strength here so a
+    # reviewer can see and challenge the choice. (A null + PM2 should reach LP, which
+    # the Moderate strength makes possible with PVS1 at Very Strong.)
     pm2_met = af is not None and af < PM2_AF
     criteria.append(
         ACMGCriterion(
             code="PM2",
             direction=CriterionDirection.PATHOGENIC,
-            strength=CriterionStrength.SUPPORTING,  # ClinGen SVI down-weights PM2
+            strength=CriterionStrength.MODERATE,
             met=pm2_met,
             rationale=(
                 f"Allele frequency {af:.2e} is below the rare threshold {PM2_AF:.0e}."

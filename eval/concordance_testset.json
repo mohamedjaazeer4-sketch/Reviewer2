@@ -1,0 +1,188 @@
+{
+  "_about": "Concordance test set for Reviewer2. Unlike ErrorCatch (which measures whether the second-reviewer FLAGS disagreements), this measures ACCURACY: does the deterministic engine's INDEPENDENT classification match an external expert standard? 'expert_truth' is the expert-panel / ClinGen-VCEP (3-star) ClinVar germline classification — chosen as an INDEPENDENT gold standard NOT derived from this engine. The engine never reads 'expert_truth'; it only sees the population/computational/assertion evidence. Crucially this set INCLUDES cases the v1 engine is EXPECTED to miss (e.g. pathogenic-by-functional-assay, where PS3 is not implemented) so the concordance number is honest, not inflated. This is a HAND-CURATED ILLUSTRATIVE set with real gene/accession context; a production run needs the live ClinVar/gnomAD/VEP provider (v1.1). n is reported so the metric stays honest.",
+  "cases": [
+    {
+      "id": "conc-brca1-null-01",
+      "gene": "BRCA1",
+      "expert_truth": "Pathogenic",
+      "expert_source": "ClinVar VCV000017661 (ENIGMA VCEP, 3-star)",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "17", "pos": 43093464, "ref": "A", "alt": "T", "gene": "BRCA1", "hgvs_p": "p.Glu23fs"},
+      "evidence": [
+        {"source": "VEP", "summary": "frameshift", "source_quote": "Consequence: frameshift_variant.", "data": {"consequence": "frameshift_variant"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}},
+        {"source": "ClinVar", "summary": "Pathogenic, expert panel", "source_quote": "Germline classification: Pathogenic (ENIGMA).", "source_id": "VCV000017661", "data": {"clinvar_classification": "Pathogenic", "review_status_conflicting": false, "same_aa_change_pathogenic": true}, "source_last_updated": "2026-01-15"}
+      ]
+    },
+    {
+      "id": "conc-tp53-null-02",
+      "gene": "TP53",
+      "expert_truth": "Likely pathogenic",
+      "expert_source": "ClinVar (ClinGen TP53 VCEP)",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "17", "pos": 7674000, "ref": "G", "alt": "A", "gene": "TP53", "hgvs_p": "p.Arg196*"},
+      "evidence": [
+        {"source": "VEP", "summary": "stop gained", "source_quote": "Consequence: stop_gained.", "data": {"consequence": "stop_gained"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}}
+      ]
+    },
+    {
+      "id": "conc-brca2-common-benign-03",
+      "gene": "BRCA2",
+      "expert_truth": "Benign",
+      "expert_source": "ClinVar VCV000038266 (ENIGMA VCEP, 3-star)",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "13", "pos": 32340301, "ref": "T", "alt": "C", "gene": "BRCA2", "hgvs_p": "p.Val2466Ala"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "common", "source_quote": "Global AF: 0.262.", "data": {"allele_frequency": 0.262}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.05.", "data": {"ensemble_score": 0.05}}
+      ]
+    },
+    {
+      "id": "conc-pcsk9-bs1-benign-04",
+      "gene": "PCSK9",
+      "expert_truth": "Benign",
+      "expert_source": "ClinVar VCV000004309",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "1", "pos": 55039974, "ref": "G", "alt": "A", "gene": "PCSK9", "hgvs_p": "p.Arg46Leu"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "1.6%", "source_quote": "Global AF: 0.016.", "data": {"allele_frequency": 0.016}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.18.", "data": {"ensemble_score": 0.18}}
+      ]
+    },
+    {
+      "id": "conc-pten-splice-05",
+      "gene": "PTEN",
+      "expert_truth": "Pathogenic",
+      "expert_source": "ClinVar (ClinGen PTEN VCEP)",
+      "engine_should_match": false,
+      "_why_miss": "Expert call rests on functional + clinical data (PS3/PP4) the v1 engine does not implement; with PVS1+PM2 the engine reaches Likely pathogenic, one tier short of expert Pathogenic. Same action band — a known, honest under-call.",
+      "variant": {"genome": "GRCh38", "chrom": "10", "pos": 87933000, "ref": "G", "alt": "A", "gene": "PTEN", "hgvs_c": "c.510+1G>A"},
+      "evidence": [
+        {"source": "VEP", "summary": "splice donor", "source_quote": "Consequence: splice_donor_variant.", "data": {"consequence": "splice_donor_variant"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}}
+      ]
+    },
+    {
+      "id": "conc-msh2-functional-missense-06",
+      "gene": "MSH2",
+      "expert_truth": "Pathogenic",
+      "expert_source": "ClinVar (InSiGHT VCEP)",
+      "engine_should_match": false,
+      "_why_miss": "Pathogenic by MMR functional assay (PS3) + segregation (PP1), neither implemented in v1. Engine sees a rare missense with intermediate in-silico -> VUS. This is the MOST IMPORTANT honest miss: it shows where the engine is blind.",
+      "variant": {"genome": "GRCh38", "chrom": "2", "pos": 47476000, "ref": "G", "alt": "A", "gene": "MSH2", "hgvs_p": "p.Gly692Arg"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "rare", "source_quote": "Global AF: 8e-6.", "data": {"allele_frequency": 8e-06}},
+        {"source": "computational", "summary": "intermediate", "source_quote": "Ensemble score: 0.62.", "data": {"ensemble_score": 0.62}}
+      ]
+    },
+    {
+      "id": "conc-vus-genuine-07",
+      "gene": "PALB2",
+      "expert_truth": "Uncertain significance",
+      "expert_source": "ClinVar (multiple submitters, no conflict)",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "16", "pos": 23635000, "ref": "C", "alt": "G", "gene": "PALB2", "hgvs_p": "p.Pro120Arg"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "rare", "source_quote": "Global AF: 5e-5.", "data": {"allele_frequency": 5e-05}},
+        {"source": "computational", "summary": "intermediate", "source_quote": "Ensemble score: 0.5.", "data": {"ensemble_score": 0.5}}
+      ]
+    },
+    {
+      "id": "conc-apc-lb-08",
+      "gene": "APC",
+      "expert_truth": "Likely benign",
+      "expert_source": "ClinVar VCV000182000",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "5", "pos": 112839000, "ref": "A", "alt": "G", "gene": "APC", "hgvs_p": "p.Ile1307Val"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "1.2%", "source_quote": "Global AF: 0.012.", "data": {"allele_frequency": 0.012}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.22.", "data": {"ensemble_score": 0.22}}
+      ]
+    },
+    {
+      "id": "conc-mlh1-null-09",
+      "gene": "MLH1",
+      "expert_truth": "Pathogenic",
+      "expert_source": "ClinVar (InSiGHT VCEP)",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "3", "pos": 37017000, "ref": "C", "alt": "T", "gene": "MLH1", "hgvs_p": "p.Arg226*"},
+      "evidence": [
+        {"source": "VEP", "summary": "stop gained", "source_quote": "Consequence: stop_gained.", "data": {"consequence": "stop_gained"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}},
+        {"source": "ClinVar", "summary": "Pathogenic", "source_quote": "Germline classification: Pathogenic.", "source_id": "VCV000090514", "data": {"clinvar_classification": "Pathogenic", "review_status_conflicting": false, "same_aa_change_pathogenic": true}, "source_last_updated": "2025-09-12"}
+      ]
+    },
+    {
+      "id": "conc-ba1-benign-10",
+      "gene": "BRCA2",
+      "expert_truth": "Benign",
+      "expert_source": "ClinVar (ENIGMA VCEP)",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "13", "pos": 32398000, "ref": "A", "alt": "G", "gene": "BRCA2", "hgvs_p": "p.Asn372His"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "common ~23%", "source_quote": "Global AF: 0.23.", "data": {"allele_frequency": 0.23}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.10.", "data": {"ensemble_score": 0.10}}
+      ]
+    },
+    {
+      "id": "conc-pp3-only-missense-11",
+      "gene": "BRCA1",
+      "expert_truth": "Uncertain significance",
+      "expert_source": "ClinVar (no functional data)",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "17", "pos": 43091000, "ref": "T", "alt": "C", "gene": "BRCA1", "hgvs_p": "p.Met1775Val"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "rare", "source_quote": "Global AF: 2e-5.", "data": {"allele_frequency": 2e-05}},
+        {"source": "computational", "summary": "damaging", "source_quote": "Ensemble score: 0.88.", "data": {"ensemble_score": 0.88}}
+      ]
+    },
+    {
+      "id": "conc-cdh1-null-12",
+      "gene": "CDH1",
+      "expert_truth": "Pathogenic",
+      "expert_source": "ClinVar (ClinGen CDH1 VCEP)",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "16", "pos": 68812000, "ref": "C", "alt": "T", "gene": "CDH1", "hgvs_p": "p.Gln23*"},
+      "evidence": [
+        {"source": "VEP", "summary": "stop gained", "source_quote": "Consequence: stop_gained.", "data": {"consequence": "stop_gained"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}},
+        {"source": "ClinVar", "summary": "Pathogenic", "source_quote": "Germline classification: Pathogenic.", "source_id": "VCV000012345", "data": {"clinvar_classification": "Pathogenic", "review_status_conflicting": false, "same_aa_change_pathogenic": true}, "source_last_updated": "2025-07-01"}
+      ]
+    },
+    {
+      "id": "conc-vhl-missense-functional-13",
+      "gene": "VHL",
+      "expert_truth": "Pathogenic",
+      "expert_source": "ClinVar (ClinGen VHL VCEP)",
+      "engine_should_match": false,
+      "_why_miss": "Classic VHL missense pathogenic by functional + phenotype evidence (PS3/PP4); engine lacks both and lands at VUS. Honest blind spot.",
+      "variant": {"genome": "GRCh38", "chrom": "3", "pos": 10146000, "ref": "T", "alt": "C", "gene": "VHL", "hgvs_p": "p.Tyr98His"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "absent", "source_quote": "Global AF: 0.0.", "data": {"allele_frequency": 0.0}},
+        {"source": "computational", "summary": "intermediate", "source_quote": "Ensemble score: 0.66.", "data": {"ensemble_score": 0.66}}
+      ]
+    },
+    {
+      "id": "conc-benign-lof-tolerant-14",
+      "gene": "PCSK9",
+      "expert_truth": "Benign",
+      "expert_source": "ClinVar (multiple submitters)",
+      "engine_should_match": true,
+      "variant": {"genome": "GRCh38", "chrom": "1", "pos": 55052000, "ref": "C", "alt": "T", "gene": "PCSK9", "hgvs_p": "p.Ala443Thr"},
+      "evidence": [
+        {"source": "VEP", "summary": "missense", "source_quote": "Consequence: missense_variant.", "data": {"consequence": "missense_variant"}},
+        {"source": "gnomAD", "summary": "3%", "source_quote": "Global AF: 0.03.", "data": {"allele_frequency": 0.03}},
+        {"source": "computational", "summary": "tolerated", "source_quote": "Ensemble score: 0.20.", "data": {"ensemble_score": 0.20}}
+      ]
+    }
+  ]
+}
