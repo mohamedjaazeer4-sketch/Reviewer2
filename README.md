@@ -113,26 +113,97 @@ Reproduced by `make concordance`.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A["ReviewRequest
-    variant + proposed call"] --> N(normalise)
-    N --> F(fetch_evidence)
-    F --> S(score_acmg)
-    S --> C(detect_conflicts)
-    C --> D["ReviewDossier
-    call · criteria · conflicts · provenance"]
+### Pipeline overview
 
-    F -. "ClinVar / gnomAD / VEP" .-> EV[("Evidence provider
-    fixture · live · MCP")]
-    S -. deterministic, LLM-free .-> RULES[["ACMG 2015 rules engine"]]
-    D -. summary only .-> LLM{{"LLM
-    Ollama / cloud / template"}}
+```mermaid
+flowchart TD
+    IN["📥  INPUT\nVariant  +  Proposed classification\ne.g. BRCA1 c.5266dupC  /  Uncertain significance"]
+
+    IN --> A
+
+    subgraph GRAPH ["  LangGraph pipeline  (pipeline.py)  "]
+        direction TB
+        A["1️⃣  Normalise\nStandardise chrom / alleles\n― normalise.py ―"]
+        B["2️⃣  Fetch evidence\nPull ClinVar · gnomAD · VEP · in-silico\n― evidence.py ―"]
+        C["3️⃣  Score ACMG\nApply 2015 combining rules independently\n― acmg/rules.py · acmg/scorer.py ―"]
+        D["4️⃣  Detect conflicts\nCompare independent call vs proposed call\n― conflicts.py ―"]
+        A --> B --> C --> D
+    end
+
+    EV[("Evidence\nprovider\nfixture / live / MCP")]
+    RULES[["ACMG 2015\nrules engine\ndeterministic\nLLM-free"]]
+    LLM{{"LLM  (optional)\nOllama · Anthropic\nOpenAI · Gemini\npolishes prose only"}}
+
+    B -. retrieves .-> EV
+    C -. classification via .-> RULES
+    D -. summary text .-> LLM
+
+    D --> OUT
+
+    OUT["📤  OUTPUT  —  ReviewDossier\n✦ Independent ACMG call\n✦ Each criterion with source quote\n✦ Conflicts graded CRITICAL / MAJOR / MINOR / INFO\n✦ Provenance hash  (sha256 of inputs + engine version)"]
+
+    style IN fill:#e8f4f8,stroke:#4a90d9,color:#000
+    style OUT fill:#e8f8e8,stroke:#4a9d4a,color:#000
+    style RULES fill:#fff8e8,stroke:#d9a020,color:#000
+    style LLM fill:#f8e8f8,stroke:#9a4ab0,color:#000
+    style EV fill:#f8f0e8,stroke:#b06030,color:#000
+    style GRAPH fill:#f5f5f5,stroke:#888,color:#000
 ```
 
-**Action-band conflict gating.** Pathogenic and Likely pathogenic lead to the same clinical management. Reviewer2 only raises a blocking disagreement when two calls fall in different clinical action bands (act / monitor / do not act). A P-vs-LP difference is recorded but does not block sign-off — because the most damaging thing a second-reviewer can do is generate noise.
+### What each step does
 
-**Provenance hash.** Every dossier carries a `sha256[:16]` over the variant, evidence fingerprint, fired criteria, and engine version. Identical inputs produce an identical hash, enforced by a test.
+| Step | What happens | Key file |
+|---|---|---|
+| **Normalise** | Strip `chr` prefix, uppercase alleles, left-trim indels so the variant key is stable | `normalise.py` |
+| **Fetch evidence** | Retrieve structured evidence from ClinVar, gnomAD, VEP, and in-silico predictors | `evidence.py` |
+| **Score ACMG** | Fire PVS1/PS1/PM2/PP3/BP4/BA1/BS1 from the evidence; classify via Richards 2015 Table 5 rules | `acmg/scorer.py`, `acmg/rules.py` |
+| **Detect conflicts** | Compare the independent call against the proposed call; grade each disagreement by clinical severity | `conflicts.py` |
+
+### Where the LLM fits — and where it does not
+
+```
+Classification verdict ──► deterministic rules engine only  (never the LLM)
+Prose summary          ──► LLM polishes a template           (any provider, or none)
+```
+
+The LLM cannot change the ACMG call. If no LLM is configured, the deterministic template summary is used instead. The demo and eval run entirely without one.
+
+### What the output contains
+
+Every run produces a `ReviewDossier` with four parts:
+
+```
+Independent classification   — the engine's own ACMG call from evidence
+Fired criteria               — each criterion with strength, rationale, and literal source quote
+Conflict flags               — each disagreement graded CRITICAL / MAJOR / MINOR / INFO
+Provenance hash              — sha256[:16] of (variant + evidence + criteria + engine version)
+```
+
+A `CRITICAL` conflict means the two calls cross the clinical action boundary (act vs. monitor vs. do not act) — sign-off is blocked. `INFO` conflicts are logged but do not block.
+
+### MCP server — calling Reviewer2 from another agent
+
+```mermaid
+flowchart LR
+    AGENT["Any MCP-aware agent\nClaude Desktop\nVS Code Copilot\nLangGraph orchestrator"]
+
+    subgraph MCP ["  gnomad-clinvar-mcp  (mcp_server/server.py)  "]
+        T1["get_evidence\n(variant) → evidence items\nwith source quotes"]
+        T2["review_variant_tool\n(variant + proposed) → full\nReviewDossier as JSON"]
+    end
+
+    PIPELINE["Reviewer2 pipeline\n(same LangGraph graph)"]
+
+    AGENT -- "tool call" --> T1
+    AGENT -- "tool call" --> T2
+    T1 & T2 --> PIPELINE
+
+    style AGENT fill:#e8f4f8,stroke:#4a90d9,color:#000
+    style MCP fill:#f5f5f5,stroke:#888,color:#000
+    style PIPELINE fill:#e8f8e8,stroke:#4a9d4a,color:#000
+```
+
+The MCP server runs on stdio transport (`make mcp`) and exposes the same pipeline used by the CLI. Any MCP host can wire it in as a tool.
 
 ---
 
