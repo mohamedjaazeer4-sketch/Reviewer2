@@ -1,5 +1,7 @@
 # Reviewer2
 
+![CI](https://github.com/ankurgenomics/reviewer2/actions/workflows/ci.yml/badge.svg)
+
 A second-reviewer tool for germline ACMG/AMP variant classification. It independently re-derives
 the ACMG call from structured evidence, grounds every fired criterion in a literal source quote,
 and flags where the proposed classification disagrees with current data.
@@ -78,8 +80,13 @@ by a test. You can audit any dossier and reproduce it.
 
 ### ErrorCatch
 
-ErrorCatch measures whether the second-reviewer flags classification errors. It injects known
-errors into a test set and reports the catch rate and false-positive rate separately.
+ErrorCatch asks a specific question: given a variant with an injected classification error, does
+the second-reviewer flag it? It does not measure whether the engine's independent call is
+clinically correct — that is what the Concordance eval below is for. The two evals are kept
+separate on purpose.
+
+The test set has 8 injected errors and 4 correct controls. The injected errors cover the five
+error classes most common in real variant interpretation workflows.
 
 | Error type | Caught |
 |---|:---:|
@@ -88,9 +95,13 @@ errors into a test set and reports the catch rate and false-positive rate separa
 | Overcall on a common variant (BA1/BS1 should fire) | 2 / 2 |
 | Undercall on a null variant in a LoF-intolerant gene | 2 / 2 |
 | In-silico evidence applied in the wrong direction | 1 / 1 |
-| **Total** | **8 / 8** |
+| **Total** | **8 / 8 (95% CI 68%–100%)** |
 
-False-positive rate on 4 correct controls: **0%**
+False-positive rate on 4 correct controls: **0% (95% CI 0%–49%)**
+
+The wide CI on both numbers reflects the sample size. This is a methodology demonstration, not
+a published benchmark. The test set is hand-curated, fully inspectable, and self-contained in
+`eval/errorcatch_testset.json`.
 
 Reproduced by `make eval`. Results written to `eval/results/errorcatch.json`.
 
