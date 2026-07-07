@@ -271,7 +271,7 @@ Runs on stdio transport. Start with `make mcp`. Any MCP host points at `uv run p
 git clone https://github.com/ankurgenomics/Reviewer2.git
 cd Reviewer2
 
-uv sync                  # install from the committed lockfile — fully reproducible
+uv sync --extra dev      # install from the committed lockfile, including test/dev tools
 make demo                # 3 fixture cases, no API keys, no network
 make eval                # ErrorCatch harness
 make concordance         # concordance vs expert-panel ClinVar
